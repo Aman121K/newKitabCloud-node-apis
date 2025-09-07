@@ -1,0 +1,28 @@
+# Node.js API Environment Configuration
+# Copy this file to .env and update with your actual values
+
+# Server Configuration
+NODE_ENV=development
+PORT=3000
+
+# Database Configuration (Laravel-compatible)
+# These match your Laravel .env file
+DB_CONNECTION=mysql
+DB_HOST=api.kitabcloud.se
+DB_PORT=3306
+DB_DATABASE=kitabcloud_db
+DB_USERNAME=root
+DB_PASSWORD=vikas
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-here-min-16-chars
+
+# Optional: Bypass token for testing (matches Laravel X-Custom-Token)
+BYPASS_TOKEN=your-bypass-token-here
+
+# Legacy MySQL variables (optional - will fall back to DB_ vars)
+# MYSQL_HOST=127.0.0.1
+# MYSQL_PORT=3306
+# MYSQL_USER=root
+# MYSQL_PASSWORD=
+# MYSQL_DB=kitabcloud_db

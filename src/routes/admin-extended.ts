@@ -101,6 +101,28 @@ router.post('/podcasts', requireJwt, upload.single('cover_image'), async (req, r
   }
 });
 
+router.get('/podcasts/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT p.*, a.name as author_name, r.name as reader_name, c.category_name
+      FROM podcasts p
+      LEFT JOIN authors a ON p.author_id = a.id
+      LEFT JOIN readers r ON p.reader_id = r.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Podcast not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.put('/podcasts/:id', requireJwt, upload.single('cover_image'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -219,6 +241,26 @@ router.post('/sub-categories', requireJwt, upload.single('image'), async (req, r
   }
 });
 
+router.get('/sub-categories/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT sc.*, c.category_name
+      FROM sub_categories sc
+      LEFT JOIN categories c ON sc.category_id = c.id
+      WHERE sc.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sub Category not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.put('/sub-categories/:id', requireJwt, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -312,6 +354,21 @@ router.post('/notifications', requireJwt, async (req, res) => {
     );
     
     return res.json({ success: true, data: { id: result.insertId } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/notifications/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM notifications WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -554,6 +611,28 @@ router.post('/coming-soon-books', requireJwt, upload.single('book_image'), async
   }
 });
 
+router.get('/coming-soon-books/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT csb.*, a.name as author_name, c.category_name, l.name as language_name
+      FROM coming_soon_books csb
+      LEFT JOIN authors a ON csb.author_id = a.id
+      LEFT JOIN categories c ON csb.category_id = c.id
+      LEFT JOIN languages l ON csb.language_id = l.id
+      WHERE csb.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Coming Soon Book not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.put('/coming-soon-books/:id', requireJwt, upload.single('book_image'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -655,6 +734,21 @@ router.post('/advertisements', requireJwt, upload.single('ad_image'), async (req
     );
     
     return res.json({ success: true, data: { id: result.insertId } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/advertisements/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM advertisements WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Advertisement not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -779,6 +873,26 @@ router.post('/episodes', requireJwt, upload.fields([
   }
 });
 
+router.get('/episodes/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT e.*, p.name as podcast_name
+      FROM episodes e
+      LEFT JOIN podcasts p ON e.podcast_id = p.id
+      WHERE e.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Episode not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.put('/episodes/:id', requireJwt, upload.fields([
   { name: 'episode_thumbnail', maxCount: 1 },
   { name: 'episode_file', maxCount: 1 }
@@ -831,6 +945,265 @@ router.delete('/episodes/:id', requireJwt, async (req, res) => {
     const { id } = req.params;
     await pool.execute('DELETE FROM episodes WHERE id = ?', [id]);
     return res.json({ success: true, message: 'Episode deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== EXPENSES ====================
+router.get('/expenses', requireJwt, async (req, res) => {
+  try {
+    const { page, limit, search, sortBy, sortOrder } = getPaginationParams(req.query);
+    const offset = (page - 1) * limit;
+    
+    // Build search condition
+    const searchFields = ['e.description', 'ec.name'];
+    const searchCondition = buildSearchCondition(search, searchFields);
+    const searchValues = getSearchValues(search, searchFields);
+    
+    // Build WHERE clause
+    const whereClause = searchCondition ? `WHERE ${searchCondition}` : '';
+    
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM expenses e
+      LEFT JOIN expense_categories ec ON e.category_id = ec.id
+      ${whereClause}
+    `;
+    const [countResult]: any = await pool.execute(countQuery, searchValues);
+    const total = countResult[0].total;
+    
+    // Get expenses with pagination
+    const query = `
+      SELECT 
+        e.id,
+        e.description,
+        e.amount,
+        e.date,
+        e.created_at,
+        e.updated_at,
+        ec.name as category_name
+      FROM expenses e
+      LEFT JOIN expense_categories ec ON e.category_id = ec.id
+      ${whereClause}
+      ORDER BY e.${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+    
+    const [rows]: any = await pool.execute(query, [...searchValues, limit, offset]);
+    
+    const result = buildPaginationResult(rows, total, page, limit);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/expenses', requireJwt, async (req, res) => {
+  try {
+    const { description, amount, date, category_id } = req.body;
+    
+    const [result]: any = await pool.execute(
+      'INSERT INTO expenses (description, amount, date, category_id, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+      [description, amount, date, category_id]
+    );
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Expense created successfully',
+      data: { id: result.insertId }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/expenses/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT e.*, ec.name as category_name
+      FROM expenses e
+      LEFT JOIN expense_categories ec ON e.expense_category_id = ec.id
+      WHERE e.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Expense not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/expenses/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, date, category_id } = req.body;
+    
+    await pool.execute(
+      'UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, updated_at = NOW() WHERE id = ?',
+      [description, amount, date, category_id, id]
+    );
+    
+    return res.json({
+      success: true,
+      message: 'Expense updated successfully'
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/expenses/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM expenses WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Expense deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==================== BACKGROUND IMAGES ====================
+router.get('/background-images', requireJwt, async (req, res) => {
+  try {
+    const { page, limit, search, sortBy, sortOrder } = getPaginationParams(req.query);
+    const offset = (page - 1) * limit;
+    
+    // Build search condition
+    const searchFields = ['title', 'description'];
+    const searchCondition = buildSearchCondition(search, searchFields);
+    const searchValues = getSearchValues(search, searchFields);
+    
+    // Build WHERE clause
+    const whereClause = searchCondition ? `WHERE ${searchCondition}` : '';
+    
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM background_images
+      ${whereClause}
+    `;
+    const [countResult]: any = await pool.execute(countQuery, searchValues);
+    const total = countResult[0].total;
+    
+    // Get background images with pagination
+    const query = `
+      SELECT 
+        id,
+        title,
+        description,
+        image,
+        status,
+        created_at,
+        updated_at
+      FROM background_images
+      ${whereClause}
+      ORDER BY ${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+    
+    const [rows]: any = await pool.execute(query, [...searchValues, limit, offset]);
+    
+    const result = buildPaginationResult(rows, total, page, limit);
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.post('/background-images', requireJwt, upload.single('image'), async (req, res) => {
+  try {
+    const { title, description, status = 1 } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : null;
+    
+    const [result]: any = await pool.execute(
+      'INSERT INTO background_images (title, description, image, status, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+      [title, description, image, status]
+    );
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Background image created successfully',
+      data: { id: result.insertId }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/background-images/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM background_images WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Background Image not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/background-images/:id', requireJwt, upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, status } = req.body;
+    
+    let updateFields = ['title = ?', 'description = ?', 'status = ?', 'updated_at = NOW()'];
+    let updateValues = [title, description, status];
+    
+    if (req.file) {
+      updateFields.push('image = ?');
+      updateValues.push(`/uploads/${req.file.filename}`);
+    }
+    
+    updateValues.push(id);
+    
+    await pool.execute(
+      `UPDATE background_images SET ${updateFields.join(', ')} WHERE id = ?`,
+      updateValues
+    );
+    
+    return res.json({
+      success: true,
+      message: 'Background image updated successfully'
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.patch('/background-images/:id/status', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    await pool.execute(
+      'UPDATE background_images SET status = ?, updated_at = NOW() WHERE id = ?',
+      [status, id]
+    );
+    
+    return res.json({
+      success: true,
+      message: 'Background image status updated successfully'
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/background-images/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM background_images WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Background image deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

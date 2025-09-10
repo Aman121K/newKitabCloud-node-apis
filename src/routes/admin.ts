@@ -174,6 +174,21 @@ router.delete('/categories/:id', requireJwt, async (req, res) => {
   }
 });
 
+router.get('/categories/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM categories WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/categories/:id/status', requireJwt, async (req, res) => {
   try {
     const { id } = req.params;
@@ -260,6 +275,21 @@ router.delete('/users/:id', requireJwt, async (req, res) => {
     const { id } = req.params;
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
     return res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/users/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -365,6 +395,21 @@ router.delete('/authors/:id', requireJwt, async (req, res) => {
   }
 });
 
+router.get('/authors/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM authors WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Author not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/authors/:id/status', requireJwt, async (req, res) => {
   try {
     const { id } = req.params;
@@ -452,6 +497,21 @@ router.delete('/languages/:id', requireJwt, async (req, res) => {
   }
 });
 
+router.get('/languages/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM languages WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Language not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/languages/:id/status', requireJwt, async (req, res) => {
   try {
     const { id } = req.params;
@@ -534,6 +594,21 @@ router.delete('/tags/:id', requireJwt, async (req, res) => {
     const { id } = req.params;
     await pool.execute('DELETE FROM tags WHERE id = ?', [id]);
     return res.json({ success: true, message: 'Tag deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/tags/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM tags WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Tag not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -640,6 +715,21 @@ router.delete('/publishers/:id', requireJwt, async (req, res) => {
   }
 });
 
+router.get('/publishers/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM publishers WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Publisher not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/publishers/:id/status', requireJwt, async (req, res) => {
   try {
     const { id } = req.params;
@@ -736,6 +826,21 @@ router.delete('/readers/:id', requireJwt, async (req, res) => {
     const { id } = req.params;
     await pool.execute('DELETE FROM readers WHERE id = ?', [id]);
     return res.json({ success: true, message: 'Reader deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/readers/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query('SELECT * FROM readers WHERE id = ?', [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Reader not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -949,6 +1054,41 @@ router.delete('/books/:id', requireJwt, async (req, res) => {
   }
 });
 
+router.get('/books/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT b.*, a.name as author_name, r.name as reader_name, p.name as publisher_name, 
+             c.category_name, l.name as language_name
+      FROM books b
+      LEFT JOIN authors a ON b.author_id = a.id
+      LEFT JOIN readers r ON b.reader_id = r.id
+      LEFT JOIN publishers p ON b.publisher_id = p.id
+      LEFT JOIN categories c ON b.category_id = c.id
+      LEFT JOIN languages l ON b.language_id = l.id
+      WHERE b.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Book not found' });
+    }
+    
+    // Get tags for this book
+    const [tags]: any = await pool.query(`
+      SELECT t.* FROM tags t
+      INNER JOIN book_tags bt ON t.id = bt.tag_id
+      WHERE bt.book_id = ?
+    `, [id]);
+    
+    const book = rows[0];
+    book.tags = tags;
+    
+    return res.json({ success: true, data: book });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/books/:id/status', requireJwt, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1050,6 +1190,27 @@ router.delete('/videos/:id', requireJwt, async (req, res) => {
     await pool.execute('DELETE FROM video_tags WHERE video_id = ?', [id]);
     await pool.execute('DELETE FROM videos WHERE id = ?', [id]);
     return res.json({ success: true, message: 'Video deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.get('/videos/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT v.*, c.category_name, sc.name as sub_category_name
+      FROM videos v
+      LEFT JOIN categories c ON v.category_id = c.id
+      LEFT JOIN sub_categories sc ON v.sub_category_id = sc.id
+      WHERE v.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Video not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

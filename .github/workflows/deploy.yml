@@ -31,7 +31,7 @@ jobs:
             pm2 reload kitabcloud-api --update-env --time
           else
             pm2 delete kitabcloud-api >/dev/null 2>&1 || true
-            pm2 start src/server.js --name kitabcloud-api --interpreter "$NODE_BIN"
+            pm2 start src/server.ts --name kitabcloud-api --interpreter "$NODE_BIN"
           fi
           pm2 save
           pm2 status

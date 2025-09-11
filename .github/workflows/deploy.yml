@@ -29,6 +29,6 @@ jobs:
         run: |
           pm2 describe kitabcloud-api >/dev/null 2>&1 \
             && pm2 reload kitabcloud-api --update-env \
-            || pm2 start ecosystem.config.js
+            || pm2 start ecosystem.config.cjs
           pm2 save
           pm2 status

@@ -16,19 +16,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'yarn'          # caches node_modules by lockfile
+          cache: yarn
 
       - name: Install deps (Yarn)
         run: |
-          corepack enable || true   # harmless if already enabled
+          corepack enable || true
           yarn install --frozen-lockfile
 
-      # No build step needed
-
-      - name: Start/Reload PM2 (src/server.js)
+      - name: Start/Reload PM2 (force Node, no ecosystem file)
         run: |
-          pm2 describe kitabcloud-api >/dev/null 2>&1 \
-            && pm2 reload kitabcloud-api --update-env \
-            || pm2 start ecosystem.config.cjs
+          NODE_BIN="$(which node)"
+          echo "Using node at: $NODE_BIN"
+          if pm2 describe kitabcloud-api >/dev/null 2>&1; then
+            pm2 reload kitabcloud-api --update-env --time
+          else
+            pm2 delete kitabcloud-api >/dev/null 2>&1 || true
+            pm2 start src/server.js --name kitabcloud-api --interpreter "$NODE_BIN"
+          fi
           pm2 save
           pm2 status

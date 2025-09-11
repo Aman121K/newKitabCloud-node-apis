@@ -1,0 +1,34 @@
+name: Deploy on push to main
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 18 + Yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'yarn'          # caches node_modules by lockfile
+
+      - name: Install deps (Yarn)
+        run: |
+          corepack enable || true   # harmless if already enabled
+          yarn install --frozen-lockfile
+
+      # No build step needed
+
+      - name: Start/Reload PM2 (src/server.js)
+        run: |
+          pm2 describe kitabcloud-api >/dev/null 2>&1 \
+            && pm2 reload kitabcloud-api --update-env \
+            || pm2 start ecosystem.config.js
+          pm2 save
+          pm2 status

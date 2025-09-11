@@ -27,7 +27,7 @@ export function createApp() {
 	registerRoutes(app);
 
 	app.get('/health', (_req, res) => {
-		res.json({ ok: true });
+		res.json({ ok: true, message: 'API is running' });
 	});
 
 	app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

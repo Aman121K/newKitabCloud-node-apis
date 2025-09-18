@@ -1209,4 +1209,188 @@ router.delete('/background-images/:id', requireJwt, async (req, res) => {
   }
 });
 
+// ==================== FEEDBACK ====================
+// Submit feedback from client
+router.post('/feedback', async (req, res) => {
+  try {
+    const { feedback, timestamp } = req.body || {};
+    
+    // Validate required fields
+    if (!feedback || !feedback.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Feedback is required' 
+      });
+    }
+    
+    // Insert feedback into database
+    const [result]: any = await pool.execute(
+      'INSERT INTO feedback ( feedback, timestamp, created_at, updated_at) VALUES ( ?, ?, NOW(), NOW())',
+      [ feedback.trim(), timestamp || new Date().toISOString()]
+    );
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Feedback submitted successfully',
+      data: { id: result.insertId }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get all feedback with pagination and search
+router.get('/feedback', requireJwt, async (req, res) => {
+  try {
+    const { page, limit, search, sortBy, sortOrder } = getPaginationParams(req.query);
+    const offset = (page - 1) * limit;
+    
+    // Build search condition
+    const searchFields = ['f.feedback', 'u.full_name', 'u.email'];
+    const searchCondition = buildSearchCondition(search, searchFields);
+    const searchValues = getSearchValues(search, searchFields);
+    
+    // Build WHERE clause
+    const whereClause = searchCondition ? `WHERE ${searchCondition}` : '';
+    
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM feedback f
+      LEFT JOIN users u ON f.user_id = u.id
+      ${whereClause}
+    `;
+    const [countResult]: any = await pool.query(countQuery, searchValues);
+    const totalItems = countResult[0]?.total || 0;
+    
+    // Get feedback with pagination
+    const dataQuery = `
+      SELECT 
+        f.id,
+        f.feedback,
+        f.timestamp,
+        f.created_at,
+        f.updated_at,
+        u.id as user_id,
+        u.full_name,
+        u.email
+      FROM feedback f
+      LEFT JOIN users u ON f.user_id = u.id
+      ${whereClause}
+      ORDER BY f.${sortBy} ${sortOrder}
+      LIMIT ? OFFSET ?
+    `;
+    const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
+    
+    const result = buildPaginationResult(rows, totalItems, page, limit);
+    return res.json({ success: true, ...result });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get single feedback by ID
+router.get('/feedback/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows]: any = await pool.query(`
+      SELECT 
+        f.id,
+        f.feedback,
+        f.timestamp,
+        f.created_at,
+        f.updated_at,
+        u.id as user_id,
+        u.full_name,
+        u.email
+      FROM feedback f
+      LEFT JOIN users u ON f.user_id = u.id
+      WHERE f.id = ?
+    `, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Feedback not found' });
+    }
+    
+    return res.json({ success: true, data: rows[0] });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update feedback (admin only)
+router.put('/feedback/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { feedback } = req.body || {};
+    
+    if (!feedback || !feedback.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Feedback is required' 
+      });
+    }
+    
+    await pool.execute(
+      'UPDATE feedback SET feedback = ?, updated_at = NOW() WHERE id = ?',
+      [feedback.trim(), id]
+    );
+    
+    return res.json({
+      success: true,
+      message: 'Feedback updated successfully'
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Delete feedback (admin only)
+router.delete('/feedback/:id', requireJwt, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM feedback WHERE id = ?', [id]);
+    return res.json({ success: true, message: 'Feedback deleted successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get feedback statistics
+router.get('/feedback/stats', requireJwt, async (req, res) => {
+  try {
+    // Get total feedback count
+    const [totalCount]: any = await pool.query('SELECT COUNT(*) as total FROM feedback');
+    
+    // Get feedback count by month (last 6 months)
+    const [monthlyCount]: any = await pool.query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as month,
+        COUNT(*) as count
+      FROM feedback 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      ORDER BY month DESC
+    `);
+    
+    // Get recent feedback (last 7 days)
+    const [recentCount]: any = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM feedback 
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    `);
+    
+    return res.json({
+      success: true,
+      data: {
+        total: totalCount[0].total,
+        recent: recentCount[0].count,
+        monthly: monthlyCount
+      }
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

@@ -1,37 +1,42 @@
-name: Deploy on push to main
+name: Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main   # or whichever branch you want to auto-deploy
 
 jobs:
   deploy:
-    runs-on: self-hosted
-
+    runs-on: self-hosted   # your EC2 runner
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node 18 + Yarn
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: yarn
+          cache: 'yarn'
 
-      - name: Install deps (Yarn)
+      - name: Enable Corepack
         run: |
-          corepack enable || true
-          yarn install --frozen-lockfile
+          corepack enable
+          # Option A → Yarn 4 (if you migrated lockfile)
+          corepack prepare yarn@4.9.4 --activate
+          # Option B → Yarn 1 (if you kept old lockfile)
+          # corepack prepare yarn@1.22.22 --activate
 
-      - name: Start/Reload PM2 (force Node, no ecosystem file)
+      - name: Install dependencies
         run: |
-          NODE_BIN="$(which node)"
-          echo "Using node at: $NODE_BIN"
-          if pm2 describe kitabcloud-api >/dev/null 2>&1; then
-            pm2 reload kitabcloud-api --update-env --time
-          else
-            pm2 delete kitabcloud-api >/dev/null 2>&1 || true
-            pm2 start src/server.ts --name kitabcloud-api --interpreter "$NODE_BIN"
-          fi
-          pm2 save
-          pm2 status
+          # Option A
+          yarn install --immutable --immutable-cache
+          # Option B
+          # yarn install --frozen-lockfile
+
+      - name: Build project
+        run: yarn build
+
+      - name: Deploy
+        run: |
+          pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
+          # OR whatever command you use to run Node/Express

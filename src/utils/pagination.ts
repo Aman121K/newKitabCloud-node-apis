@@ -1,10 +1,10 @@
 // Pagination utility functions
 export interface PaginationParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  page: number;
+  limit: number;
+  search: string;
+  sortBy: string;
+  sortOrder: 'ASC' | 'DESC';
 }
 
 export interface PaginationResult<T> {

@@ -1245,49 +1245,40 @@ router.post('/feedback', async (req, res) => {
 // Get all feedback with pagination and search
 router.get('/feedback', requireJwt, async (req, res) => {
   try {
-    const { page, limit, search, sortBy, sortOrder } = getPaginationParams(req.query);
-    const offset = (page - 1) * limit;
+    // First, let's test if the table exists and get a simple count
+    console.log('Testing feedback table...');
     
-    // Build search condition
-    const searchFields = ['f.feedback', 'u.full_name', 'u.email'];
-    const searchCondition = buildSearchCondition(search, searchFields);
-    const searchValues = getSearchValues(search, searchFields);
+    // Simple test query first
+    const testQuery = 'SELECT COUNT(*) as total FROM feedback';
+    console.log('Test Query:', testQuery);
     
-    // Build WHERE clause
-    const whereClause = searchCondition ? `WHERE ${searchCondition}` : '';
+    const [testResult]: any = await pool.execute(testQuery, []);
+    console.log('Test Result:', testResult);
     
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(*) as total 
-      FROM feedback f
-      LEFT JOIN users u ON f.user_id = u.id
-      ${whereClause}
-    `;
-    const [countResult]: any = await pool.execute(countQuery, searchValues);
-    const totalItems = countResult[0]?.total || 0;
+    const totalItems = testResult[0]?.total || 0;
+    console.log('Total Items:', totalItems);
     
-    // Get feedback with pagination
-    const dataQuery = `
-      SELECT 
-        f.id,
-        f.feedback,
-        f.timestamp,
-        f.created_at,
-        f.updated_at,
-        u.id as user_id,
-        u.full_name,
-        u.email
-      FROM feedback f
-      LEFT JOIN users u ON f.user_id = u.id
-      ${whereClause}
-      ORDER BY f.${sortBy} ${sortOrder}
-      LIMIT ? OFFSET ?
-    `;
-    const [rows]: any = await pool.execute(dataQuery, [...searchValues, limit, offset]);
+    // Simple data query without pagination first
+    const simpleDataQuery = 'SELECT id, feedback, timestamp, created_at, updated_at FROM feedback ORDER BY created_at DESC LIMIT 10';
+    console.log('Simple Data Query:', simpleDataQuery);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
-    return res.json({ success: true, ...result });
+    const [rows]: any = await pool.execute(simpleDataQuery, []);
+    console.log('Simple Data Result:', rows);
+    
+    return res.json({ 
+      success: true, 
+      data: rows,
+      total: totalItems,
+      message: 'Feedback retrieved successfully'
+    });
   } catch (error: any) {
+    console.error('Feedback API Error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState
+    });
     return res.status(500).json({ success: false, message: error.message });
   }
 });

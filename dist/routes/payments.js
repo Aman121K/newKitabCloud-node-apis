@@ -21,7 +21,7 @@ router.post('/create-setup-intent', requireJwt, (_req, res) => res.status(501).j
 router.post('/create-mpgs-payment', requireJwt, (_req, res) => res.status(501).json({ message: 'Not implemented' }));
 router.post('/subscribe', requireJwt, (_req, res) => res.status(501).json({ message: 'Not implemented' }));
 router.post('/subscribe_mpesa', requireJwt, (_req, res) => res.status(501).json({ message: 'Not implemented' }));
-router.post('/check_mpesa_status', requireJwt, (_req, res) => res.status(501).json({ message: 'Not implemented' }));
+router.post('/check_mpesa_status2', requireJwt, (_req, res) => res.status(501).json({ message: 'Not implemented' }));
 router.post('/payment', requireJwt, async (req, res) => {
     try {
         const account_no = req.body?.account_no;

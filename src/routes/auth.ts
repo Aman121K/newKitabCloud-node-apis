@@ -61,6 +61,7 @@ router.get('/getIpInfo', async (req, res) => {
 
 router.get('/backgroundImages', async (_req, res) => {
 	try {
+		console.log('backgroundImages api is calling');
 		const [rows] = await pool.query('SELECT * FROM back_ground_images');
 		return res.json({ status: true, data: rows });
 	} catch (e: any) { return res.status(500).json({ status: false, message: e?.message || 'Internal error' }); }
@@ -108,7 +109,8 @@ router.post('/socialSignup', async (req, res) => {
 		const user = await getUserById(id);
 		const token = signToken({ id, email: user?.email });
 		return res.json({ success: true, token, user });
-	} catch (e: any) { return res.status(500).json({ success: false, message: e?.message || 'Internal error' }); }
+	} catch (e: any) { 
+		return res.status(500).json({ success: false, message: e?.message || 'Internal error' }); }
 });
 
 router.post('/socialLogin', async (req, res) => {

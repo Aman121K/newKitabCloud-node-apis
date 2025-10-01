@@ -139,13 +139,31 @@ router.post('/create-subscription', requireJwt, async (req: any, res) => {
     const subscription = await stripe.subscriptions.create(subscriptionParams);
 
     if (subscription.status === 'active' || subscription.status === 'trialing') {
+      // Get current timestamp as fallback
+      const now = new Date();
+      const oneMonthFromNow = new Date();
+      oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+      // Safely get subscription dates with fallbacks
+      const startDate = subscription.current_period_start 
+        ? new Date(subscription.current_period_start * 1000)
+        : now;
+      
+      const endDate = subscription.current_period_end 
+        ? new Date(subscription.current_period_end * 1000)
+        : oneMonthFromNow;
+
+      // Validate dates before converting to ISO string
+      const subscriptionStart = isNaN(startDate.getTime()) ? now : startDate;
+      const subscriptionEnd = isNaN(endDate.getTime()) ? oneMonthFromNow : endDate;
+
       // Store subscription data
       const subscriptionData = {
         subscription_id: subscription.id,
         customer: customer,
         plan_id: subscription.items.data[0].price.id,
-        subscription_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-        subscription_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+        subscription_start: subscriptionStart.toISOString(),
+        subscription_end: subscriptionEnd.toISOString(),
         plan_amount: (subscription.items.data[0].price.unit_amount || 0) / 100,
         currency: subscription.items.data[0].price.currency,
         interval: subscription.items.data[0].price.recurring?.interval || 'month',
@@ -184,16 +202,20 @@ router.post('/create-subscription', requireJwt, async (req: any, res) => {
 
       // Update user trial information
       const trialStart = (subscription as any).trial_start ? 
-        new Date((subscription as any).trial_start * 1000).toISOString() : 
-        new Date((subscription as any).current_period_start * 1000).toISOString();
+        new Date((subscription as any).trial_start * 1000) : 
+        new Date((subscription as any).current_period_start * 1000);
       
       const trialEnd = (subscription as any).trial_end ? 
-        new Date((subscription as any).trial_end * 1000).toISOString() : 
-        new Date((subscription as any).current_period_end * 1000).toISOString();
+        new Date((subscription as any).trial_end * 1000) : 
+        new Date((subscription as any).current_period_end * 1000);
+
+      // Convert to MySQL datetime format (YYYY-MM-DD HH:MM:SS)
+      const trialStartFormatted = trialStart.toISOString().slice(0, 19).replace('T', ' ');
+      const trialEndFormatted = trialEnd.toISOString().slice(0, 19).replace('T', ' ');
 
       await pool.execute(
         'UPDATE users SET trial_start = ?, trial_end = ?, subscription_status = 1 WHERE id = ?',
-        [trialStart, trialEnd, userId]
+        [trialStartFormatted, trialEndFormatted, userId]
       );
 
       // Update trial status if trial is granted
@@ -557,6 +579,90 @@ router.post('/cancel-trial', requireJwt, async (req: any, res) => {
     res.status(500).json({
       error: 'Server error: ' + error.message
     });
+  }
+});
+
+// ==================== CANCEL SUBSCRIPTION ====================
+router.post('/cancel-subscription', requireJwt, async (req: any, res) => {
+  try {
+    const userId = req.user?.id || req.user?.sub;
+    const { subscription_id, reason } = req.body;
+
+    if (!subscription_id) {
+      return res.status(400).json({ success: false, message: 'Subscription ID is required' });
+    }
+
+    // Check if subscription exists and belongs to user
+    const [subscriptions]: any = await pool.query(
+      'SELECT * FROM subscriptions WHERE id = ? AND user_id = ?',
+      [subscription_id, userId]
+    );
+
+    if (subscriptions.length === 0) {
+      return res.status(404).json({ success: false, message: 'Subscription not found' });
+    }
+
+    const subscription = subscriptions[0];
+
+    // If it's a Stripe subscription, cancel it via Stripe API
+    if (subscription.type === 'stripe' && subscription.subscription_id) {
+      try {
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        
+        // Cancel the subscription in Stripe
+        await stripe.subscriptions.cancel(subscription.subscription_id, {
+          cancellation_details: {
+            comment: reason || 'User requested cancellation',
+            feedback: 'other'
+          }
+        });
+
+        // Update subscription status in database
+        await pool.execute(
+          'UPDATE subscriptions SET payment_status = ?, updated_at = NOW() WHERE id = ?',
+          ['Cancelled', subscription_id]
+        );
+
+        // Update user subscription status
+        await pool.execute(
+          'UPDATE users SET subscription_status = 0, updated_at = NOW() WHERE id = ?',
+          [userId]
+        );
+
+        return res.json({ 
+          success: true, 
+          message: 'Subscription cancelled successfully',
+          cancelled_at: new Date().toISOString()
+        });
+      } catch (stripeError: any) {
+        console.error('Stripe cancellation error:', stripeError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to cancel subscription with payment provider: ' + stripeError.message 
+        });
+      }
+    } else {
+      // For non-Stripe subscriptions, just update the database
+      await pool.execute(
+        'UPDATE subscriptions SET payment_status = ?, updated_at = NOW() WHERE id = ?',
+        ['Cancelled', subscription_id]
+      );
+
+      // Update user subscription status
+      await pool.execute(
+        'UPDATE users SET subscription_status = 0, updated_at = NOW() WHERE id = ?',
+        [userId]
+      );
+
+      return res.json({ 
+        success: true, 
+        message: 'Subscription cancelled successfully',
+        cancelled_at: new Date().toISOString()
+      });
+    }
+  } catch (error: any) {
+    console.error('Cancel subscription error:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 });
 

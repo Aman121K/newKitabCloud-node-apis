@@ -86,31 +86,59 @@ router.get('/country/lat-lng', async (req, res) => {
 
 router.post('/socialSignup', async (req, res) => {
 	try {
-		const { provider_id, password, device_type, device_token, fcm_token, email, full_name, country } = req.body || {};
-		if (!provider_id || !password) return res.status(400).json({ success: false, message: 'provider_id and password required' });
+		console.log('socialSignup api is calling');
+		console.log('Request body:', req.body);
+		
+		const { provider_id, password, device_type, device_token, fcm_token, email, full_name, country, age, role } = req.body || {};
+		
+		// Convert password to string if it's a number
+		const passwordStr = String(password || '');
+		
+		if (!provider_id || !passwordStr) {
+			return res.status(400).json({ success: false, message: 'provider_id and password required' });
+		}
+		
+		// Check if user already exists
 		const [rows]: any = await pool.query('SELECT * FROM users WHERE provider_id = ? LIMIT 1', [provider_id]);
+		
 		if (Array.isArray(rows) && rows[0]) {
+			// User exists, update device info and login
 			await pool.execute('UPDATE users SET device_type=?, device_token=?, fcm_token=?, updated_at=NOW() WHERE provider_id = ?', [
 				device_type || null, device_token || null, fcm_token || null, provider_id
 			]);
 			const u = rows[0];
-			const ok = await bcrypt.compare(password, u.password);
+			const ok = await bcrypt.compare(passwordStr, u.password);
 			if (!ok) return res.status(400).json({ success: false, message: 'Login credentials are invalid.' });
 			const token = signToken({ id: u.id, email: u.email });
 			return res.json({ success: true, token, user: u });
 		}
-		const hash = await bcrypt.hash(password, 10);
+		
+		// User doesn't exist, create new user
+		const hash = await bcrypt.hash(passwordStr, 10);
+		
+		// Check if email already exists
+		if (email) {
+			const [existingEmail]: any = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+			if (Array.isArray(existingEmail) && existingEmail[0]) {
+				return res.status(400).json({ success: false, message: 'Email already exists' });
+			}
+		}
+		
 		const [result]: any = await pool.execute(
-			`INSERT INTO users (full_name, email, country, provider_id, password, device_type, device_token, fcm_token, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-			[full_name || '', email || '', country || null, provider_id, hash, device_type || null, device_token || null, fcm_token || null]
+			`INSERT INTO users (full_name, email, country, provider_id, password, device_type, device_token, fcm_token, age, role, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+			[full_name || '', email || '', country || null, provider_id, hash, device_type || null, device_token || null, fcm_token || null, age || null, role || null]
 		);
+		
 		const id = result.insertId;
 		const user = await getUserById(id);
 		const token = signToken({ id, email: user?.email });
 		return res.json({ success: true, token, user });
+		
 	} catch (e: any) { 
-		return res.status(500).json({ success: false, message: e?.message || 'Internal error' }); }
+		console.error('socialSignup error:', e);
+		return res.status(500).json({ success: false, message: e?.message || 'Internal error' }); 
+	}
 });
 
 router.post('/socialLogin', async (req, res) => {

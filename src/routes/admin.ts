@@ -114,7 +114,7 @@ router.get('/categories', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -228,7 +228,7 @@ router.get('/users', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -334,7 +334,7 @@ router.get('/authors', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -449,7 +449,7 @@ router.get('/languages', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -551,7 +551,7 @@ router.get('/tags', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -653,7 +653,7 @@ router.get('/publishers', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -769,7 +769,7 @@ router.get('/readers', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -900,7 +900,7 @@ router.get('/books', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -922,11 +922,12 @@ router.post('/books', requireJwt, upload.fields([
       coming_soon, ifunza_status, tags, color, average_rating
     } = req.body;
     
-    const coverimage = req.files?.coverimage?.[0]?.path || null;
-    const bookfile = req.files?.bookfile?.[0]?.path || null;
-    const bookaudio = req.files?.bookaudio?.[0]?.path || null;
-    const sample_audio = req.files?.sample_audio?.[0]?.path || null;
-    const gif = req.files?.gif?.[0]?.path || null;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const coverimage = files?.coverimage?.[0]?.path || null;
+    const bookfile = files?.bookfile?.[0]?.path || null;
+    const bookaudio = files?.bookaudio?.[0]?.path || null;
+    const sample_audio = files?.sample_audio?.[0]?.path || null;
+    const gif = files?.gif?.[0]?.path || null;
     
     const [result]: any = await pool.execute(
       `INSERT INTO books (title, description, author_id, reader_id, publisher_id, category_id, language_id, 
@@ -972,11 +973,12 @@ router.put('/books/:id', requireJwt, upload.fields([
       coming_soon, ifunza_status, status, tags, color, average_rating
     } = req.body;
     
-    const coverimage = req.files?.coverimage?.[0]?.path || null;
-    const bookfile = req.files?.bookfile?.[0]?.path || null;
-    const bookaudio = req.files?.bookaudio?.[0]?.path || null;
-    const sample_audio = req.files?.sample_audio?.[0]?.path || null;
-    const gif = req.files?.gif?.[0]?.path || null;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const coverimage = files?.coverimage?.[0]?.path || null;
+    const bookfile = files?.bookfile?.[0]?.path || null;
+    const bookaudio = files?.bookaudio?.[0]?.path || null;
+    const sample_audio = files?.sample_audio?.[0]?.path || null;
+    const gif = files?.gif?.[0]?.path || null;
     
     let updateFields = [
       'title = ?', 'description = ?', 'author_id = ?', 'reader_id = ?', 
@@ -1137,7 +1139,7 @@ router.get('/videos', requireJwt, async (req, res) => {
     `;
     const [rows] = await pool.query(dataQuery, [...searchValues, limit, offset]);
     
-    const result = buildPaginationResult(rows, totalItems, page, limit);
+    const result = buildPaginationResult(rows as any[], totalItems, page, limit);
     return res.json({ success: true, ...result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
@@ -1252,7 +1254,7 @@ router.get('/countries', requireJwt, async (req, res) => {
       [...searchValues, limit, (page - 1) * limit]
     );
 
-    const pagination = buildPaginationResult(page, limit, total);
+    const pagination = buildPaginationResult(countries as any[], total, page, limit);
 
     return res.json({
       success: true,

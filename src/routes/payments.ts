@@ -145,12 +145,12 @@ router.post('/create-subscription', requireJwt, async (req: any, res) => {
       oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
 
       // Safely get subscription dates with fallbacks
-      const startDate = subscription.current_period_start 
-        ? new Date(subscription.current_period_start * 1000)
+      const startDate = (subscription as any).current_period_start 
+        ? new Date((subscription as any).current_period_start * 1000)
         : now;
       
-      const endDate = subscription.current_period_end 
-        ? new Date(subscription.current_period_end * 1000)
+      const endDate = (subscription as any).current_period_end 
+        ? new Date((subscription as any).current_period_end * 1000)
         : oneMonthFromNow;
 
       // Validate dates before converting to ISO string
